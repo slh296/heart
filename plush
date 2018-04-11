@@ -1,0 +1,82 @@
+#include <CapPin.h>
+
+CapPin cPin_1 = CapPin(1); //ream pin 1 (X on Flora) - connect to Nes heart
+CapPin cPin_2 = CapPin(2); //read pin 2 (SDA on Flora) - connect to Nes lungs
+CapPin cPin_3 = CapPin(3); // rean pin 3 (SCL on Flora) - connect to Nes stomach
+
+CapPin pins[] = {cPin_1, cPin_2, cPin_3};
+// heart = a, lungs = b, stomach = c
+// char Keys[] = {'a', 'b', 'c', Key_heart, Key_lungs, Key_stomach};
+
+boolean currentPressed[]= {false, false, false};
+
+#define hresh 500
+//sensitivity
+
+float smoothed[3] = {0,0,0};
+
+void setup()
+{
+  //while (!Serial)
+  Serial.begin(115200);
+  Serial.println("start");
+  Keyboard.begin();
+}
+ 
+ 
+void loop()                    
+{ 
+  for (int i=0;i<3;i++) {
+    delay(1);
+    long total1 = 0;
+    long start = millis();
+    long total =  pins[i].readPin(2000);
+        // check if we are sensing that a finger is touching the pad 
+    // and that it wasnt already pressed
+    if ((total > THRESH) && (! currentPressed[i])) {
+      Serial.print("Key pressed #"); Serial.print(i);
+      Serial.print(" ("); Serial.print(Keys[i]); Serial.println(")");
+      currentPressed[i] = true;
+ 
+      Keyboard.press(Keys[i]);
+    } 
+    else if ((total <= THRESH) && (currentPressed[i])) {
+      // key was released (no touch, and it was pressed before)
+      Serial.print("Key released #"); Serial.print(i);
+      Serial.print(" ("); Serial.print(Keys[i]); Serial.println(")");
+      currentPressed[i] = false;
+      
+      Keyboard.release(Keys[i]);
+    }
+    
+/*
+    // simple lowpass filter to take out some of the jitter
+    // change parameter (0 is min, .99 is max) or eliminate to suit
+    smoothed[i] = smooth(total, .3, smoothed[i]);   
+ 
+    Serial.print(i); Serial.print(": ");
+    Serial.print( millis() - start);      // time to execute in mS
+    Serial.print("ms \t");
+    Serial.print(total);                  // raw total
+    Serial.print("\t->\t");
+    Serial.println((int) smoothed[i]);       // smoothed
+*/
+    delay(5);
+  }
+}
+ 
+// simple lowpass filter
+// requires recycling the output in the "smoothedVal" param
+int smooth(int data, float filterVal, float smoothedVal){
+ 
+  if (filterVal > 1){      // check to make sure param's are within range
+    filterVal = .999999;
+  }
+  else if (filterVal <= 0){
+    filterVal = 0;
+  }
+ 
+  smoothedVal = (data * (1 - filterVal)) + (smoothedVal  *  filterVal);
+ 
+  return (int)smoothedVal;
+ 
